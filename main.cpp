@@ -36,6 +36,110 @@ private:
     int vert_count;
 };
 
+class ListGraph
+{
+public:
+    ListGraph(int num_of_vert) : adjacencies(num_of_vert) { };
+
+    void AddEdge(int from, int to)
+    {
+        adjacencies[from].push_back(to);
+    }
+
+    int VerticesCount() const
+    {
+        return static_cast<int>(adjacencies.size());
+    }
+
+    void GetNextVertices(int vertex, vector<int> &vertices) const
+    {
+        vertices.clear();
+        for(int i : adjacencies[vertex]) {
+            vertices.push_back(i);
+        }
+    }
+
+    void GetPrevVertices(int vertex, vector<int> &vertices) const
+    {
+        vertices.clear();
+        for(int i = 0; i < static_cast<int>(adjacencies.size()); ++i)
+        {
+            if(i == vertex) {
+                continue;
+            }
+            for(int j : adjacencies[i])
+            {
+                if(j == vertex) {
+                    vertices.push_back(i);
+                }
+            }
+        }
+    }
+
+    int CountOfNext(int vertex) const
+    {
+        return static_cast<int>(adjacencies[vertex].size());
+    }
+private:
+    vector<vector<int>> adjacencies;
+};
+
+void order_dfs(const ListGraph &graph, vector<char> &visited, vector<int> &order, int vert)
+{
+    visited[vert] = 1;
+    vector<int> next_verticies;
+    graph.GetNextVertices(vert, next_verticies);
+    for(int i : next_verticies)
+    {
+        if(!visited[i]) {
+            order_dfs(graph, visited, order, i);
+        }
+    }
+    order.push_back(vert);
+}
+
+void find_component(const ListGraph &graph, vector<char> &visited,
+                    vector<int> &component, int vert) //поиск компоненты сильной связности
+{
+    visited[vert] = 1;
+    component.push_back(vert);
+    vector<int> prev_verticies;
+    graph.GetPrevVertices(vert, prev_verticies);
+    for(int i : prev_verticies)
+    {
+        if(!visited[i]) {
+            find_component(graph, visited, component, i);
+        }
+    }
+}
+
+void find_all_components(const ListGraph &graph, vector<vector<int> > &components)
+{
+    int sz = graph.VerticesCount();
+    vector<char> visited(sz);
+    vector<int> order;
+
+    for(int i = 0; i < sz; ++i) //топологическая сортировка вершин в обратном порядке
+    {
+        if(!visited[i]) {
+            order_dfs(graph, visited, order, i);
+        }
+    }
+
+    int num_of_comps = 0;
+    visited.assign(sz, 0);
+    for(int i = sz - 1; i >= 0; --i) //находим компоненты сильной связности
+    {
+        int vert = order[i];
+        if(!visited[vert])
+        {
+            ++num_of_comps;
+            components.push_back(vector<int> (0));
+            find_component(graph, visited, components[num_of_comps - 1], vert);
+        }
+    }
+}
+
 bool is_arbitrage_from(const ArcGraph &rates, int from) // проверка на наличие арбитража от заданной вершины
 {
     int sz = rates.VerticesCount();
@@ -71,9 +175,19 @@ bool is_arbitrage(const ArcGraph &rates) // проверка на наличие
     int sz = rates.VerticesCount();
     bool is_arb = false;
 
-    for(int i = 0; i < sz; ++i) // проверка на наличия арбитража от каждой вершины
+    ListGraph graph(sz); // преобразование в ListGraph
+    vector<Edge> all_edges;
+    rates.GetAllEdges(all_edges);
+    for(Edge edge : all_edges) {
+        graph.AddEdge(edge.from, edge.to);
+    }
+
+    vector<vector<int> > components;
+    find_all_components(graph, components);
+
+    for(size_t i = 0; i < components.size(); ++i) // проверка на наличия арбитража в каждой компоненте
     {
-        if(is_arbitrage_from(rates, i))
+        if(is_arbitrage_from(rates, components[i][0]))
         {
             is_arb = true;
             break;
@@ -88,6 +202,7 @@ int main()
     int n;
     cin >> n;
     ArcGraph rates(n); // граф курсов валют
+    ListGraph graph(n);
     for(int i = 0; i < n; ++i)
     {
         for(int j = 0; j < n; ++j)
