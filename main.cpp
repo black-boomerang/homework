@@ -15,6 +15,8 @@ class BoardPosition // позиция доски
 public:
     BoardPosition() : encode_pos(0), null_pos(0) { }
 
+    BoardPosition(int encode_pos, int null_pos) : encode_pos(encode_pos), null_pos(null_pos) { }
+
     BoardPosition(const vector<char> &pos)
     {
         encode_pos = 0;
@@ -57,48 +59,32 @@ public:
 
     BoardPosition Left() const // позиция, полученная из текущей "сдвигом" пустой клетки влево
     {
-        vector<char> decode_pos;
-        Decode(decode_pos);
-        if(null_pos % 3 != 0)
-        {
-            swap(decode_pos[null_pos], decode_pos[null_pos - 1]);
-            return BoardPosition(decode_pos);
+        if(null_pos % 3 != 0) {
+            return ChangePos(null_pos - 1);
         }
         return BoardPosition();
     }
 
     BoardPosition Right() const // позиция, полученная из текущей "сдвигом" пустой клетки вправо
     {
-        vector<char> decode_pos;
-        Decode(decode_pos);
-        if(null_pos % 3 != 2)
-        {
-            swap(decode_pos[null_pos], decode_pos[null_pos + 1]);
-            return BoardPosition(decode_pos);
+        if(null_pos % 3 != 2) {
+            return ChangePos(null_pos + 1);
         }
         return BoardPosition();
     }
 
     BoardPosition Top() const // позиция, полученная из текущей "сдвигом" пустой клетки вверх
     {
-        vector<char> decode_pos;
-        Decode(decode_pos);
-        if(null_pos >= 3)
-        {
-            swap(decode_pos[null_pos], decode_pos[null_pos - 3]);
-            return BoardPosition(decode_pos);
+        if(null_pos >= 3) {
+            return ChangePos(null_pos - 3);
         }
         return BoardPosition();
     }
 
     BoardPosition Bottom() const // позиция, полученная из текущей "сдвигом" пустой клетки вниз
     {
-        vector<char> decode_pos;
-        Decode(decode_pos);
-        if(null_pos <= 5)
-        {
-            swap(decode_pos[null_pos], decode_pos[null_pos + 3]);
-            return BoardPosition(decode_pos);
+        if(null_pos <= 5) {
+            return ChangePos(null_pos + 3);
         }
         return BoardPosition();
     }
@@ -115,6 +101,14 @@ private:
         }
     }
 
+    BoardPosition ChangePos(int new_null_pos) const // сдвиг нуля
+    {
+        vector<char> decode_pos;
+        Decode(decode_pos);
+        swap(decode_pos[null_pos], decode_pos[new_null_pos]);
+        return BoardPosition(decode_pos);
+    }
+
     int encode_pos;
     int null_pos;
 };
@@ -129,7 +123,7 @@ bool solve(vector<char> &pos, vector<char> &ans) // поиск решения и
         return false;
     }
 
-    map<int, char> direction;
+    map<int, char> direction; // char, чтобы не ставить кучу ifов в последнем цикле
     map<int, BoardPosition> prev;
     queue<BoardPosition> positions;
     positions.push(cur_pos);
@@ -187,3 +181,4 @@ int main()
 
     return 0;
 }
+
