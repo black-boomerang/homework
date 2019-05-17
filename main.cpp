@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
+#include <memory>
 
 using namespace std;
 
@@ -13,8 +14,8 @@ struct Node // элемент дерева
     string value;
     int sz; // кол-во вершин в поддереве
     int priority;
-    Node *left;
-    Node *right;
+    shared_ptr<Node> left;
+    shared_ptr<Node> right;
 };
 
 class Treap // декартово дерево по неявному ключу
@@ -22,20 +23,16 @@ class Treap // декартово дерево по неявному ключу
 public:
     Treap() : root(nullptr) { }
 
-    ~Treap()
-    {
-        Del_Treap(root);
-    }
-
     void InsertAt(int position, const string &value) // вставка нового значения
     {
-        Node *new_node = new Node;
+        shared_ptr<Node> new_node = make_shared<Node>();
         new_node->value = value;
         new_node->priority = rand();
         new_node->sz = 1;
         new_node->left = new_node->right = nullptr;
 
-        Node *left_treap = nullptr, *right_treap = nullptr;
+        shared_ptr<Node> left_treap(nullptr);
+        shared_ptr<Node> right_treap(nullptr);
         Split(root, position, left_treap, right_treap); // разрезаем дерево по ключу pos
         Merge(root, left_treap, new_node); // сливаем левое дерево с новым элементом
         Merge(root, root, right_treap); // сливаем с правым деревом
@@ -43,23 +40,24 @@ public:
 
     void DeleteAt(int position) // удаление элемента по индексу
     {
-        Node *left_treap = nullptr, *right_treap = nullptr, *node = nullptr;
+        shared_ptr<Node> left_treap(nullptr);
+        shared_ptr<Node> right_treap(nullptr);
+        shared_ptr<Node> node(nullptr);
         Split(root, position, left_treap, right_treap);
         Split(right_treap, 1, node, right_treap);
         Merge(root, left_treap, right_treap);
-        delete node;
     }
 
     string GetAt(int position) const // получение элемента по индексу
     {
-        Node *node = SearchAt(position);
+        shared_ptr<Node> node(SearchAt(position));
         return node->value;
     }
 private:
-    Node *SearchAt(int position) const // поиск элемента
+    shared_ptr<Node> SearchAt(int position) const // поиск элемента
     {
         int cur_position = position;
-        Node *cur_node = root;
+        shared_ptr<Node> cur_node(root);
         int left_sz = GetTreapSz(root->left);
         while(left_sz != cur_position) // пока искомая позиция не равна разверу левого поддерева
         {
@@ -78,12 +76,12 @@ private:
         return cur_node;
     }
 
-    int GetTreapSz(const Node *treap) const // размевар поддере
+    int GetTreapSz(const shared_ptr<Node> treap) const // размевар поддере
     {
         return treap ? treap->sz : 0;
     }
 
-    void ChangeSz(Node *treap) // изменение размера дерева
+    void ChangeSz(shared_ptr<Node> treap) // изменение размера дерева
     {
         if(!treap) {
             return;
@@ -91,7 +89,7 @@ private:
         treap->sz = GetTreapSz(treap->left) + GetTreapSz(treap->right) + 1;
     }
 
-    void Merge(Node *&treap, Node *left_treap, Node *right_treap)
+    void Merge(shared_ptr<Node> &treap, shared_ptr<Node> left_treap, shared_ptr<Node> right_treap)
     {
         // если какое-то из деревьев пусто, то искомое дерево равно другому
         if(!left_treap)
@@ -123,7 +121,7 @@ private:
         ChangeSz(treap);
     }
 
-    void Split(Node *treap, int key, Node *&left_treap, Node *&right_treap)
+    void Split(shared_ptr<Node> treap, int key, shared_ptr<Node> &left_treap, shared_ptr<Node> &right_treap)
     {
         if(!treap) // разрезать нечего
         {
@@ -147,18 +145,7 @@ private:
         ChangeSz(treap);
     }
 
-    void Del_Treap(Node *node) // удаление дерева
-    {
-        if(node == nullptr) {
-            return;
-        }
-
-        Del_Treap(node->left); // удаление детей
-        Del_Treap(node->right);
-        delete node;
-    }
-
-    Node *root;
+    shared_ptr<Node> root;
 };
 
 int main()
